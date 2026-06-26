@@ -1,0 +1,13 @@
+{
+  "name": "mybb-forum-reactions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Emoji reactions widget for BestBB/PunBB/myBB forums",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
