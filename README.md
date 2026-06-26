@@ -67,13 +67,13 @@ wrangler deploy
 
 После деплоя вы получите URL вида `https://mybb-forum-reactions.ваш-аккаунт.workers.dev`.
 
+> ⚠ **Важно:** Перед использованием настройте `ALLOWED_ORIGINS` в `worker/wrangler.jsonc` — укажите домены ваших форумов. Это защитит Worker от спама из посторонних источников.
+
 ### 2. Установка виджета на форум
 
 Скопируйте содержимое `widget/forum-reactions.js` и вставьте в HTML-верх форума (Админ-панель → Оформление → HTML-верх).
 
 **Перед вставкой:** замените `YOUR_ACCOUNT` в URL на ваш Cloudflare аккаунт.
-
-> ⚠ **Важно:** Worker не имеет защиты от спама — любой, кто знает URL, может слать POST-запросы. Рекомендуется добавить проверку `Origin` или rate limiting (см. `docs/ARCHITECTURE.md`).
 
 ### 3. Прокси через Yandex Cloud (опционально)
 

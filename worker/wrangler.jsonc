@@ -16,5 +16,8 @@
       "new_sqlite_classes": ["ReactionsDO"]
     }
   ],
-  "compatibility_flags": ["nodejs_compat_v2"]
+  "compatibility_flags": ["nodejs_compat_v2"],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://forum1.mybb.ru,https://forum2.mybb.ru"
+  }
 }

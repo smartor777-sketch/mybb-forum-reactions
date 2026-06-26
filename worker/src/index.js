@@ -1,5 +1,29 @@
 import { ReactionsDO } from './reactions-do.js';
 
+const ALLOWED_ORIGINS_DEFAULT = [];
+
+function getAllowedOrigins(env) {
+  const raw = env.ALLOWED_ORIGINS || ALLOWED_ORIGINS_DEFAULT;
+  if (typeof raw === 'string') return raw.split(',').map(s => s.trim()).filter(Boolean);
+  return raw;
+}
+
+function getCorsOrigin(request, allowed) {
+  if (!allowed.length) return '*';
+  const origin = request.headers.get('Origin');
+  if (!origin || origin === 'null') return 'null';
+  return allowed.includes(origin) ? origin : 'null';
+}
+
+function corsHeaders(corsOrigin) {
+  return {
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -8,13 +32,18 @@ export default {
       return new Response('Not found', { status: 404 });
     }
 
+    const allowed = getAllowedOrigins(env);
+    const corsOrigin = getCorsOrigin(request, allowed);
+
     if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
+      return new Response(null, { headers: corsHeaders(corsOrigin) });
+    }
+
+    // Block requests from disallowed origins (unless all origins allowed)
+    if (corsOrigin === 'null' && allowed.length) {
+      return new Response(JSON.stringify({ error: 'Forbidden origin' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(corsOrigin) },
       });
     }
 
@@ -37,7 +66,7 @@ export default {
       }
 
       return new Response(JSON.stringify(Object.fromEntries(entries)), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(corsOrigin) },
       });
     }
 
@@ -57,14 +86,14 @@ export default {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
+            ...corsHeaders(corsOrigin),
             'Cache-Control': 'no-cache, no-store, must-revalidate',
           },
         });
       } catch (postError) {
         return new Response(JSON.stringify({ counts: {}, user_reaction: null }), {
           status: 200,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders(corsOrigin) },
         });
       }
     }
