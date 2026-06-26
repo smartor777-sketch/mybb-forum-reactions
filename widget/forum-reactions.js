@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API = 'https://functions.yandexcloud.net/d4ee6f70vp5h5c796jju';
+  var API = 'https://forum-reactions.YOUR_ACCOUNT.workers.dev';
   var EMOJIS = [
     '\u{1F44D}', // 👍
     '\u{1F44E}', // 👎
