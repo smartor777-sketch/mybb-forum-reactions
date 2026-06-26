@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API = 'https://forum-reactions.YOUR_ACCOUNT.workers.dev';
+  var API = 'https://mybb-forum-reactions.smartor777.workers.dev';
   var EMOJIS = [
     '\u{1F44D}', // 👍
     '\u{1F44E}', // 👎

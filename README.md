@@ -65,7 +65,7 @@ wrangler login
 wrangler deploy
 ```
 
-После деплоя вы получите URL вида `https://mybb-forum-reactions.ваш-аккаунт.workers.dev`.
+После деплоя вы получите URL вида `https://mybb-forum-reactions.YOUR_ACCOUNT.workers.dev`.
 
 > ⚠ **Важно:** Перед использованием настройте `ALLOWED_ORIGINS` в `worker/wrangler.jsonc` — укажите домены ваших форумов. Это защитит Worker от спама из посторонних источников.
 
