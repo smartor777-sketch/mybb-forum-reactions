@@ -1,12 +1,16 @@
 # Реакции на посты форума (emoji reactions)
 
-Готовый функционал реакций к постам (как в Xenforo/Invision) для форумов на BestBB/PunBB/mybb.ru. Эмодзи, счётчики, тёмная тема — всё работает.
+Готовый функционал реакций к постам (как в Xenforo/Invision) для форумов на BestBB/PunBB/mybb.ru. Эмодзи, счётчики, тёмная тема, тултип с именами — всё работает.
 
 ```
 ▶ Реакции (5)     ← кликабельный заголовок
      ↓ клик
 ┌──────────────────────────────────────────────┐
 │  👍 1  👎 0  ❤ 2  😂 0  😮 0  😢 0  ...  │
+└──────────────────────────────────────────────┘
+     ↓ hover
+┌──────────────────────────────────────────────┐
+│  Прореагировали Даша, Мария и ещё 3.         │  ← тултип
 └──────────────────────────────────────────────┘
 ```
 
@@ -16,19 +20,19 @@
 
 ## Схема работы
 
+Основной путь (через Яндекс.Облако для регионов, где Cloudflare недоступен):
+
 ```
-Форум (BestBB)    →  Cloudflare Worker  →  Durable Object (SQLite)
-     │                      │                      │
-     │  GET /api/reactions  │  stub.fetch('/get')   │
-     │  ?post_ids=1,2,3     │ ────────────────────► │
-     │  &user_id=456       │                      │ чтение storage
-     │ ◄─────────────────── │ ◄──────────────────── │
-     │                      │                      │
-     │  POST /api/reactions │  stub.fetch('/set')   │
-     │  {post_id,user_id,   │  ?user_id=...        │
-     │   emoji}             │  &emoji=...          │
-     │ ───────────────────► │ ────────────────────► │ toggle + запись
+Форум (BestBB) → YC Function (прокси) → Cloudflare Worker → Durable Object (SQLite)
 ```
+
+Прямой путь (если Cloudflare доступен):
+
+```
+Форум (BestBB) → Cloudflare Worker → Durable Object (SQLite)
+```
+
+Worker принимает GET (чтение реакций, список проголосовавших) и POST (установка/снятие реакции).
 
 ---
 
@@ -36,19 +40,24 @@
 
 ```
 mybb-forum-reactions/
-├── worker/                  # Cloudflare Worker + Durable Object
-│   ├── wrangler.jsonc       # конфигурация Wrangler
-│   ├── package.json
-│   └── src/
-│       ├── index.js         # API Gateway
-│       └── reactions-do.js  # Durable Object (хранилище)
+├── worker/                       # Cloudflare Worker + Durable Object
+│   ├── wrangler.jsonc            # конфигурация Wrangler
+│   ├── src/
+│   │   ├── index.js              # API Gateway
+│   │   └── reactions-do.js       # Durable Object (хранилище)
+│   └── package.json
+├── yandex-proxy/                 # прокси для РФ (Yandex Cloud Functions)
+│   ├── index.js                  # код функции
+│   └── package.json
 ├── widget/
-│   └── forum-reactions.js   # виджет для форума (вставка в HTML-верх)
-├── yandex-proxy/            # прокси для регионов, где Cloudflare недоступен
-│   ├── index.js
-│   └── README.md
+│   ├── forum-reactions.js        # виджет (читаемый код)
+│   └── forum-reactions-minified.js  # виджет (минифицированный)
+├── scripts/
+│   ├── deploy-cf.ps1             # деплой Cloudflare Worker
+│   ├── deploy-yc.ps1             # деплой YC Function
+│   └── deploy-all.ps1            # деплой всего
 ├── docs/
-│   └── ARCHITECTURE.md      # архитектура, проблемы и решения
+│   └── ARCHITECTURE.md           # архитектура, проблемы и решения
 └── README.md
 ```
 
@@ -60,24 +69,42 @@ mybb-forum-reactions/
 
 ```bash
 cd worker
-npm install -g wrangler
-wrangler login
-wrangler deploy
+npx wrangler deploy
 ```
 
-После деплоя вы получите URL вида `https://mybb-forum-reactions.YOUR_ACCOUNT.workers.dev`.
+Перед деплоем укажите в `wrangler.jsonc` домены ваших форумов в `ALLOWED_ORIGINS` — это защитит Worker от спама.
 
-> ⚠ **Важно:** Перед использованием настройте `ALLOWED_ORIGINS` в `worker/wrangler.jsonc` — укажите домены ваших форумов. Это защитит Worker от спама из посторонних источников.
+### 2. Деплой Yandex Cloud прокси (рекомендуется для РФ)
 
-### 2. Установка виджета на форум
+**Через скрипт:**
+```powershell
+.\scripts\deploy-yc.ps1
+```
 
-Скопируйте содержимое `widget/forum-reactions.js` и вставьте в HTML-верх форума (Админ-панель → Оформление → HTML-верх).
+**Или вручную:** создайте функцию Node.js 18, вставьте код из `yandex-proxy/index.js`, заменив `CF_WORKER` и `ALLOWED_ORIGINS` на свои.
 
-**Перед вставкой:** замените `YOUR_ACCOUNT` в URL на ваш Cloudflare аккаунт.
+### 3. Установка виджета на форум
 
-### 3. Прокси через Yandex Cloud (опционально)
+Вставьте минифицированный код (см. `widget/forum-reactions-minified.js`) в HTML-верх форума.
 
-Если Cloudflare недоступен в вашем регионе — см. `yandex-proxy/README.md`.
+**Перед вставкой:** замените `ID_ВАШЕЙ_ФУНКЦИИ` на URL вашего YC прокси.
+
+Или подключите через внешний файл:
+```html
+<script src="https://forumstatic.ru/ваш_файл"></script>
+```
+
+---
+
+## Тултип с именами
+
+При наведении на кнопку реакции виджет запрашивает список проголосовавших через `/voters` и подтягивает имена пользователей через API форума (`api.php?method=users.get`). Имена кэшируются на клиенте.
+
+---
+
+## Документация для пользователей форума
+
+Готовая инструкция в BBCode-формате: `Как добавить реакции на форум (BBCode).txt` — содержит все шаги, коды с плейсхолдерами и минифицированный виджет.
 
 ---
 
@@ -100,10 +127,17 @@ wrangler deploy
 
 ---
 
-## Лимиты бесплатного тарифа Cloudflare
+## Лимиты бесплатных тарифов
 
+### Cloudflare
 | Ресурс | Лимит |
 |--------|-------|
 | Workers requests | 100 000/день |
 | Durable Objects requests | 1 000 000/мес |
 | DO storage | 1 ГБ (~1 000 000 постов) |
+
+### Yandex Cloud Functions
+| Ресурс | Лимит |
+|--------|-------|
+| Вызовы | 1 000 000/мес |
+| Исходящий трафик | 10 ГБ/мес |
