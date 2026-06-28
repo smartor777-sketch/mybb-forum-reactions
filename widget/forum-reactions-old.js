@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var API = 'https://functions.yandexcloud.net/ID_ВАШЕЙ_ФУНКЦИИ';
+  var API = 'https://functions.yandexcloud.net/d4ee6f70vp5h5c796jju';
   var EMOJIS = [
     '\u{1F44D}', // 👍
     '\u{1F44E}', // 👎
@@ -19,25 +19,6 @@
   var SEQ = {};
   var TRACK = {};
 
-  function decodeHtml(str) {
-    if (!str) return str || '';
-    return str.replace(/&#(\d+);/g, function (_, code) {
-      return String.fromCodePoint(parseInt(code));
-    });
-  }
-
-  function normalizeCounts(counts) {
-    var out = {};
-    for (var k in counts) {
-      var key = decodeHtml(k);
-      out[key] = (out[key] || 0) + counts[k];
-    }
-    return out;
-  }
-
-  EMOJIS = EMOJIS.map(function (e) { return decodeHtml(e); });
-  var NAME_CACHE = {};
-
   function injectCSS() {
     if (document.getElementById('rx-css')) return;
     var s = document.createElement('style');
@@ -50,7 +31,7 @@
       '.pr-arrow.open{transform:rotate(90deg)}' +
       '.pr-count{color:#888}' +
       '.post-reactions{display:flex;flex-wrap:wrap;gap:3px;padding:5px 7px;margin-top:5px;border:1px solid #c5d0e6;border-radius:8px;background:#f8f8ff;align-items:center}' +
-      '.reaction-btn{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border:1px solid #d1d1e1;border-radius:5px;cursor:pointer;font-size:13px;line-height:22px;background:#f5f5ff;transition:background .15s;user-select:none;position:relative}' +
+      '.reaction-btn{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border:1px solid #d1d1e1;border-radius:5px;cursor:pointer;font-size:13px;line-height:22px;background:#f5f5ff;transition:background .15s;user-select:none}' +
       '.reaction-btn:hover{background:#e0d8f2;border-color:#a0b0d0}' +
       '.reaction-btn.active{background:#3e779d;border-color:#3e779d;color:#fff}' +
       '.reaction-btn.loading{opacity:.5;cursor:wait}' +
@@ -62,9 +43,7 @@
       'body.dark-theme .reaction-btn{background:#2d3748;border-color:#4a5b70;color:#e2e8f0}' +
       'body.dark-theme .reaction-btn:hover{background:#3a4a5e;border-color:#5a6b80}' +
       'body.dark-theme .reaction-btn.active{background:#426B9A;border-color:#426B9A;color:#fff}' +
-      'body.dark-theme .pr-count{color:#8899aa}' +
-      '.rx-tooltip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;white-space:nowrap;z-index:999;pointer-events:none;margin-bottom:4px}' +
-      'body.dark-theme .rx-tooltip{background:#1a1a2e}';
+      'body.dark-theme .pr-count{color:#8899aa}';
     document.head.appendChild(s);
   }
 
@@ -89,7 +68,7 @@
 
   function totalCount(counts) {
     var t = 0;
-    EMOJIS.forEach(function (e) { t += counts[decodeHtml(e)] || 0; });
+    EMOJIS.forEach(function (e) { t += counts[e] || 0; });
     return t;
   }
 
@@ -110,40 +89,7 @@
       .catch(function () { return null; });
   }
 
-  function fetchNames(ids) {
-    var uncached = ids.filter(function (id) { return !NAME_CACHE[id]; });
-    if (!uncached.length) return Promise.resolve();
-    var promises = uncached.map(function (id) {
-      return fetch('https://ВАШ_ФОРУМ.mybb.ru/api.php?method=users.get&user_id=' + id)
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data && data.response && data.response.users && data.response.users[0] && data.response.users[0].username) {
-            NAME_CACHE[id] = data.response.users[0].username;
-          }
-        })
-        .catch(function () {});
-    });
-    return Promise.all(promises);
-  }
-
-  function showTooltip(btn, names) {
-    var existing = btn.querySelector('.rx-tooltip');
-    if (existing) existing.remove();
-    if (!names.length) return;
-
-    var text = names.length <= 3
-      ? '\u041F\u0440\u043E\u0440\u0435\u0430\u0433\u0438\u0440\u043E\u0432\u0430\u043B\u0438 ' + names.join(', ') + '.'
-      : '\u041F\u0440\u043E\u0440\u0435\u0430\u0433\u0438\u0440\u043E\u0432\u0430\u043B\u0438 ' + names.slice(0, 2).join(', ') + ' \u0438 \u0435\u0449\u0451 ' + (names.length - 2) + '.';
-
-    var tip = document.createElement('div');
-    tip.className = 'rx-tooltip';
-    tip.textContent = text;
-    btn.appendChild(tip);
-  }
-
   function render(pid, counts, mine) {
-    counts = normalizeCounts(counts);
-    mine = decodeHtml(mine);
     var post = document.getElementById('p' + pid);
     if (!post) return;
 
@@ -182,30 +128,10 @@
       var btn = document.createElement('span');
       btn.className = 'reaction-btn' + active;
       btn.dataset.post = pid;
-      btn.dataset.emoji = decodeHtml(emoji);
+      btn.dataset.emoji = emoji;
       btn.innerHTML = '<span class="emoji">' + emoji + '</span>' +
         '<span class="count">' + count + '</span>';
       if (!isOwn) btn.addEventListener('click', onClick);
-
-      btn.addEventListener('mouseenter', function () {
-        var self = this;
-        fetch(API + '?post_id=' + pid + '&emoji=' + encodeURIComponent(decodeHtml(emoji)))
-          .then(function (r) { return r.json(); })
-          .then(function (voterIds) {
-            if (!voterIds || !voterIds.length) return;
-            fetchNames(voterIds).then(function () {
-              var names = voterIds.map(function (id) { return NAME_CACHE[id] || id; });
-              showTooltip(self, names);
-            });
-          })
-          .catch(function () {});
-      });
-
-      btn.addEventListener('mouseleave', function () {
-        var tip = this.querySelector('.rx-tooltip');
-        if (tip) tip.remove();
-      });
-
       panel.appendChild(btn);
     });
 
@@ -214,8 +140,6 @@
   }
 
   function updateUI(pid, counts, mine) {
-    counts = normalizeCounts(counts);
-    mine = decodeHtml(mine);
     var wrap = document.querySelector('#p' + pid + ' .post-reactions-wrap');
     if (!wrap) return;
 

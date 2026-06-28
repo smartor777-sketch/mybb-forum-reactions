@@ -1,7 +1,3 @@
-function decodeHtmlEntities(str) {
-  return str.replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)));
-}
-
 export class ReactionsDO {
   constructor(state, env) {
     this.state = state;
@@ -14,40 +10,18 @@ export class ReactionsDO {
     try {
       if (url.pathname === '/get') {
         const userId = url.searchParams.get('user_id') || '0';
-        const raw = (await this.state.storage.get('reactions')) || {};
-        const reactions = {};
-        for (const [uid, emoji] of Object.entries(raw)) {
-          reactions[uid] = decodeHtmlEntities(emoji);
-        }
+        const reactions = (await this.state.storage.get('reactions')) || {};
         return this._response(reactions, userId);
-      }
-
-      if (url.pathname === '/voters') {
-        const emoji = decodeHtmlEntities(url.searchParams.get('emoji'));
-        if (!emoji) {
-          return new Response('Missing emoji', { status: 400 });
-        }
-        const raw = (await this.state.storage.get('reactions')) || {};
-        const voters = Object.entries(raw)
-          .filter(([, e]) => decodeHtmlEntities(e) === emoji)
-          .map(([uid]) => uid);
-        return new Response(JSON.stringify(voters), {
-          headers: { 'Content-Type': 'application/json' },
-        });
       }
 
       if (url.pathname === '/set') {
         const user_id = url.searchParams.get('user_id');
-        const emoji = decodeHtmlEntities(url.searchParams.get('emoji'));
+        const emoji = url.searchParams.get('emoji');
         if (!user_id || !emoji) {
           return new Response('Missing params', { status: 400 });
         }
 
-        const raw = (await this.state.storage.get('reactions')) || {};
-        const reactions = {};
-        for (const [uid, e] of Object.entries(raw)) {
-          reactions[uid] = decodeHtmlEntities(e);
-        }
+        const reactions = (await this.state.storage.get('reactions')) || {};
 
         if (reactions[user_id] === emoji) {
           delete reactions[user_id];

@@ -3,18 +3,17 @@
 ## Схема
 
 ```
-Форум (BestBB/PunBB)          Cloudflare Worker             Durable Object
-       │                            │                            │
-       │  GET /api/reactions        │  stub.fetch('/get')        │
-       │  ?post_ids=1,2,3           │ ──────────────────────────► │
-       │  &user_id=456            │                            │ чтение storage
-       │ ◄───────────────────────── │ ◄────────────────────────── │
-       │                            │                            │
-       │  POST /api/reactions       │  stub.fetch('/set')        │
-       │  {post_id, user_id, emoji} │  ?user_id=...&emoji=...   │
-       │ ──────────────────────────► │ ──────────────────────────► │
-       │                            │                            │ toggle + запись
-       │ ◄── {counts, user_reaction}│ ◄────────────────────────── │
+Форум (MyBB)        Yandex Cloud Function        Cloudflare Worker          Durable Object
+       │                      │                            │                            │
+       │  GET/?post_ids=...  │  forward Origin+body       │  stub.fetch('/get')        │
+       │ ───────────────────► │ ──────────────────────────► │ ──────────────────────────► │
+       │ ◄─────────────────── │ ◄────────────────────────── │ ◄────────────────────────── │
+       │                      │                            │                            │
+       │  POST /              │  forward Origin+body       │  stub.fetch('/set')        │
+       │  {post_id,user_id,  │ ──────────────────────────► │ ──────────────────────────► │
+       │   emoji}            │                            │                            │ toggle
+       │ ◄── {counts,        │ ◄────────────────────────── │ ◄────────────────────────── │
+       │       user_reaction}│                            │                            │
 ```
 
 - **Durable Object** — один DO на пост: хранит `{ userId: emoji, ... }`

@@ -39,6 +39,7 @@ export default {
       return new Response(null, { headers: corsHeaders(corsOrigin) });
     }
 
+    // Block requests from disallowed origins (unless all origins allowed)
     if (corsOrigin === 'null' && allowed.length) {
       return new Response(JSON.stringify({ error: 'Forbidden origin' }), {
         status: 403,
@@ -47,18 +48,6 @@ export default {
     }
 
     if (request.method === 'GET') {
-      const postId = url.searchParams.get('post_id');
-      const emoji = url.searchParams.get('emoji');
-
-      if (postId && emoji) {
-        const id = env.REACTIONS_DO.idFromName(`post:${postId}`);
-        const stub = env.REACTIONS_DO.get(id);
-        const resp = await stub.fetch(`http://do/voters?emoji=${encodeURIComponent(emoji)}`);
-        return new Response(await resp.text(), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders(corsOrigin) },
-        });
-      }
-
       const postIds = (url.searchParams.get('post_ids') || '').split(',').filter(Boolean);
       const userId = url.searchParams.get('user_id') || '0';
 

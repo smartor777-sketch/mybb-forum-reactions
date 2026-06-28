@@ -1,0 +1,9 @@
+{
+  "name": "forum-reactions-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Yandex Cloud proxy for Cloudflare Worker",
+  "scripts": {
+    "deploy": "pwsh ../scripts/deploy-yc.ps1"
+  }
+}

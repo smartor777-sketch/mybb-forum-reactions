@@ -1,4 +1,4 @@
-const CF_WORKER = 'https://forum-reactions.YOUR_ACCOUNT.workers.dev';
+const CF_WORKER = 'https://ВАШ_ВОРКЕР.ВАШ_АККАУНТ.workers.dev';
 
 const ALLOWED_ORIGINS = [
   'https://forum1.mybb.ru',
@@ -37,6 +37,8 @@ async function handler(event) {
   const qs = new URLSearchParams(params).toString();
   const cfUrl = CF_WORKER + '/api/reactions' + (qs ? '?' + qs : '');
   const cfHeaders = {};
+  if (headers['origin']) cfHeaders['Origin'] = headers['origin'];
+  else if (headers['Origin']) cfHeaders['Origin'] = headers['Origin'];
   if (headers['content-type']) cfHeaders['Content-Type'] = headers['content-type'];
   const cfOptions = { method, headers: cfHeaders };
   if (method === 'POST' && event.body) cfOptions.body = event.body;
